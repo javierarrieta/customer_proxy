@@ -1,0 +1,12 @@
+[package]
+name = "customer-proxy"
+version = "0.1.0"
+authors = ["Javier Arrieta <javier@techdelivery.es>"]
+
+[dependencies]
+gotham = "0.2.1"
+hyper = "0.11.27"
+mime = "0.3.9"
+serde = "1.0.78"
+serde_derive = "1.0.78"
+serde_json = "1.0.27"
