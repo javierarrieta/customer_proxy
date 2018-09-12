@@ -1,11 +1,9 @@
-
 use gotham::router::Router;
 use gotham::router::builder::*;
-use model::Customer;
-use handlers::customer_handler;
+use handlers::CustomerHandler;
 
-pub fn customer_router(customer: &Customer) -> Router {
+pub fn customer_router(customer_handler: CustomerHandler) -> Router {
     build_simple_router(|route| {
-        route.get("/person").to_new_handler(|s| customer_handler(customer, s));
+        route.get("/customer").to_new_handler(customer_handler);
     })
 }

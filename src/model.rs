@@ -1,5 +1,5 @@
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct Customer {
     pub id: String,
     pub first_name: String,
