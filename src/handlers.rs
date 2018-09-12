@@ -13,11 +13,12 @@ use gotham::http::response::create_response;
 use gotham::handler::{Handler, NewHandler, HandlerFuture};
 use gotham::state::State;
 use hyper::StatusCode;
-use futures::future;
+use futures::{future, Future};
 
+use redis_client::CustomerClient;
 
 #[derive(Clone)]
-pub struct CustomerHandler { pub customer: Customer }
+pub struct CustomerHandler { client : CustomerClient }
 
 impl NewHandler for CustomerHandler {
     type Instance = Self;
@@ -30,14 +31,20 @@ impl NewHandler for CustomerHandler {
 impl Handler for CustomerHandler {
 
     fn handle(self, state: State) -> Box<HandlerFuture> {
-        let res = create_response(
-            &state,
-            StatusCode::Ok,
-            Some((
-                serde_json::to_vec(&self.customer).expect("serialized product"),
-                mime::APPLICATION_JSON,
-            )),
+        
+        let customer_f = Future<Item = Customer, Error = String> = 
+            self.client.get_customer("1").and_then(|customer|
+        
         );
-        Box::new(future::ok((state, res)))
+
+        // let res = create_response(
+        //     &state,
+        //     StatusCode::Ok,
+        //     Some((
+        //         serde_json::to_vec(&self.customer).expect("serialized product"),
+        //         mime::APPLICATION_JSON,
+        //     )),
+        // );
+        // Box::new(future::ok((state, res)))
     }
 }
