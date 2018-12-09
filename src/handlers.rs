@@ -5,46 +5,53 @@ extern crate serde_json;
 extern crate mime;
 extern crate futures;
 
-use std::io;
-
 use model::Customer;
 
+use std::io;
 use gotham::http::response::create_response;
-use gotham::handler::{Handler, NewHandler, HandlerFuture};
+use gotham::handler::{Handler, HandlerFuture, HandlerError, IntoHandlerError};
 use gotham::state::State;
-use hyper::StatusCode;
-use futures::{future, Future};
+use hyper::{StatusCode, Response};
+
+use futures::prelude::*;
+use futures::Future;
 
 use redis_client::CustomerClient;
 
 #[derive(Clone)]
-pub struct CustomerHandler { client : CustomerClient }
+pub struct CustomerHandler<'a> { client : &'a CustomerClient }
 
-impl NewHandler for CustomerHandler {
-    type Instance = Self;
-    
-    fn new_handler(&self) -> io::Result<Self::Instance> {
-        Ok(self.clone())
+impl<'a> CustomerHandler<'a> {
+
+    pub fn new(client: &'a CustomerClient) -> CustomerHandler<'a> {
+        CustomerHandler { client: client }
     }
 }
 
-impl Handler for CustomerHandler {
+fn create_customer_response(state: &State, customer: &Customer) -> Response {
+    create_response(
+        state,
+        StatusCode::Ok,
+        Some((
+            serde_json::to_vec(customer).expect("serialized product"),
+            mime::APPLICATION_JSON,
+        ))
+    )
+}
+
+fn create_handler_error(msg: String) -> HandlerError {
+    io::Error::new(io::ErrorKind::Other, msg).into_handler_error()
+}
+
+impl<'a> Handler for CustomerHandler<'a> {
 
     fn handle(self, state: State) -> Box<HandlerFuture> {
-        
-        let customer_f = Future<Item = Customer, Error = String> = 
-            self.client.get_customer("1").and_then(|customer|
-        
-        );
+            
+        let result_f: HandlerFuture = self.client.get_customer("1".to_owned())
+                .map(|customer| create_customer_response(&state, customer))
+                .map(|res| (&state, res))
+                .map_err(|msg| (&state, create_handler_error(msg)));
 
-        // let res = create_response(
-        //     &state,
-        //     StatusCode::Ok,
-        //     Some((
-        //         serde_json::to_vec(&self.customer).expect("serialized product"),
-        //         mime::APPLICATION_JSON,
-        //     )),
-        // );
-        // Box::new(future::ok((state, res)))
+        Box::new(result_f)
     }
 }
